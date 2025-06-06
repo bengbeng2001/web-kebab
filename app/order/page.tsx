@@ -18,7 +18,7 @@ export default function OrderPage() {
         {/* Hero Section */}
         <div className="w-full relative h-[500px]">
           <Image
-            src="/images/kebabhitam.png"
+            src="https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?q=80&w=1000&auto=format&fit=crop"
             alt="Kebab Sayank"
             fill
             className="object-cover"
