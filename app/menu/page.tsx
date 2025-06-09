@@ -173,7 +173,6 @@ export default function MenuPage() {
                   <TableRow>
                     <TableHead className="min-w-[120px]">Nama Menu</TableHead>
                     <TableHead className="min-w-[180px] hidden md:table-cell">Deskripsi</TableHead>
-                    <TableHead className="min-w-[100px]">Kategori</TableHead>
                     <TableHead className="min-w-[90px]">Harga</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -182,7 +181,6 @@ export default function MenuPage() {
                     <TableRow key={product.id}>
                       <TableCell className="font-medium text-sm">{product.name}</TableCell>
                       <TableCell className="text-sm hidden md:table-cell truncate max-w-[180px]">{product.description}</TableCell>
-                      <TableCell className="text-sm">{product.categories?.name || '-'}</TableCell>
                       <TableCell className="text-sm">Rp {product.price.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
