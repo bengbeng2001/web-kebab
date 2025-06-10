@@ -35,7 +35,7 @@ export default function OrderPage() {
         <div className="max-w-4xl px-4 py-8">
           <h2 className="text-3xl font-bold mb-8 text-center">Menu Favorit Kami</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="bg-primary/10 rounded-lg shadow-lg overflow-hidden">
               <div className="relative w-full h-48">
                 <Image
                   src="/images/kebab2.jpeg"
@@ -46,11 +46,11 @@ export default function OrderPage() {
               </div>
               <div className="p-4">
                 <h3 className="text-xl font-semibold mb-2">Kebab Ayam</h3>
-                <p className="text-gray-600 mb-4">Kebab Original isian Ayam dengan ukuran Jumbo</p>
+                <p className="text-primary mb-4">Kebab Original isian Ayam dengan ukuran Jumbo</p>
                 <p className="text-lg font-bold text-primary">Rp 25.000</p>
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="bg-primary/10 rounded-lg shadow-lg overflow-hidden">
               <div className="relative w-full h-48">
                 <Image
                   src="/images/hotdog.jpg"
@@ -61,7 +61,7 @@ export default function OrderPage() {
               </div>
               <div className="p-4">
                 <h3 className="text-xl font-semibold mb-2">Hotdog</h3>
-                <p className="text-gray-600 mb-4">Hotdog isian daging yang dapat menggugah selera makann</p>
+                <p className="text-primary mb-4">Hotdog isian daging yang dapat menggugah selera makann</p>
                 <p className="text-lg font-bold text-primary">Rp 30.000</p>
               </div>
             </div>
