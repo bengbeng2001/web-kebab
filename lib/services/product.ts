@@ -28,6 +28,7 @@ export async function getProductData() {
       name: product.name,
       description: product.description,
       price: product.price,
+      stock: product.stock || 0,
       created_at: product.created_at,
     })) || []
 
@@ -67,6 +68,7 @@ export async function getProductById(id: UUID) {
         name: product.name,
         description: product.description,
         price: product.price,
+        stock: product.stock || 0,
         created_at: product.created_at,
     }) : null
 
@@ -78,7 +80,10 @@ export async function getProductById(id: UUID) {
 }
 
 // Define a type for product data input (excluding created_at, categories, but including id_categories for one-to-many)
-type ProductUpsertData = Omit<Product, 'created_at' | 'categories'> & { id_categories: UUID | null };
+type ProductUpsertData = Omit<Product, 'created_at' | 'categories' | 'id'> & { 
+  id_categories: UUID | null;
+  id?: UUID; // Make id optional for creation
+};
 
 // Create new product
 export async function createProduct(productData: ProductUpsertData) {

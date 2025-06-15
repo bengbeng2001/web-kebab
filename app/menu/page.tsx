@@ -27,6 +27,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  stock: number;
   image_url: string;
   id_categories: string;
   created_at: string;
@@ -171,17 +172,21 @@ export default function MenuPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[120px]">Nama Menu</TableHead>
-                    <TableHead className="min-w-[180px] hidden md:table-cell">Deskripsi</TableHead>
-                    <TableHead className="min-w-[90px]">Harga</TableHead>
+                    <TableHead>No</TableHead>
+                    <TableHead>Nama</TableHead>
+                    <TableHead className="hidden md:table-cell">Deskripsi</TableHead>
+                    <TableHead>Harga</TableHead>
+                    <TableHead>Stok</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.map((product) => (
+                  {filteredProducts.map((product, index) => (
                     <TableRow key={product.id}>
-                      <TableCell className="font-medium text-sm">{product.name}</TableCell>
-                      <TableCell className="text-sm hidden md:table-cell truncate max-w-[180px]">{product.description}</TableCell>
-                      <TableCell className="text-sm">Rp {product.price.toLocaleString()}</TableCell>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell className="hidden md:table-cell">{product.description}</TableCell>
+                      <TableCell>Rp. {(product.price || 0).toLocaleString('id-ID')}</TableCell>
+                      <TableCell>{product.stock}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Category } from '../types/category_interface'
 import { 
   getCategoryData, 
@@ -15,7 +15,7 @@ export function useCategories() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true)
       const result = await getCategoryData()
@@ -26,7 +26,7 @@ export function useCategories() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   return { data, loading, error, fetchCategories }
 }

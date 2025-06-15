@@ -1,13 +1,10 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Product } from '../types/product_interface'
 import { 
-  getProductData, 
-  getProductById,
+  getProductData,
   createProduct,
   updateProduct,
   deleteProduct,
-  // You might need to import Category type if you add category hooks later
-  // Category
 } from '../services/product'
 import { UUID } from 'node:crypto';
 
@@ -17,7 +14,7 @@ export function useProducts() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true)
       const result = await getProductData()
@@ -35,7 +32,7 @@ export function useProducts() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Optionally add a fetchProductById if needed
   // const fetchProductById = async (id: UUID) => { ... }
@@ -43,14 +40,13 @@ export function useProducts() {
   return { data, loading, error, fetchProducts }
 }
 
-
 // Hook untuk membuat produk baru
 export function useCreateProduct() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<Product | null>(null)
 
-  const create = async (productData: Omit<Product, 'created_at' | 'categories'> & { id_categories: UUID | null }) => {
+  const create = async (productData: Omit<Product, 'id' | 'created_at' | 'categories'> & { id_categories: UUID | null }) => {
     try {
       setLoading(true)
       const result = await createProduct(productData)
