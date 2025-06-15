@@ -37,12 +37,7 @@ export function Sidebar() {
       title: 'Pesanan',
       href: '/admin/order',
       icon: ShoppingCart
-    }, 
-    {
-      title: 'History',
-      href: '/admin/history',
-      icon: HistoryIcon
-    }, 
+    },
   ]
 
   return (
