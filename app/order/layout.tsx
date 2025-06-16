@@ -11,7 +11,6 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const navLinks = [
-    { href: "/menu", label: "Menu" },
     { href: "/about", label: "Tentang Kami" },
     { href: "/order", label: "Pesan Sekarang!!!" },
     { href: "/location", label: "Lokasi Kami" },

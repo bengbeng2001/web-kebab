@@ -4,12 +4,10 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
 import { HeroSection } from '@/components/hero-section';
-import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 
 export default function Home() {
   const navLinks = [
-    { href: "/menu", label: "Menu" },
     { href: "/about", label: "Tentang Kami" },
     { href: "/order", label: "Pesan Sekarang!!!" },
     { href: "/location", label: "Lokasi Kami" },

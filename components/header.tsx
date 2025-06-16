@@ -9,7 +9,6 @@ export function HeaderSection() {
             <Link href={"/"} className="font-semibold">KEBAB SAYANK</Link>
             <div className="flex items-center gap-5">
                 <div className="flex gap-5 items-center font-semibold">
-                    <Link href={"/menu"}>Menu</Link>
                     <Link href={"/about"}>Tentang Kami</Link>
                     <Link href={"/order"}>Pesan Sekarang!!!</Link>
                     <Link href={"/location"}>Lokasi Kami</Link>

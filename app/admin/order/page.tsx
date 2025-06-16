@@ -35,7 +35,6 @@ import { Label } from '@/components/ui/label';
 import { Product } from '@/lib/types/product_interface';
 import { useProducts } from '@/lib/hooks/use-product';
 import { useRouter } from 'next/navigation';
-import { ErrorCard } from '@/components/error-card';
 
 const supabase = createClient();
 

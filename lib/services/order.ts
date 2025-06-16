@@ -13,7 +13,7 @@ export async function getOrderData() {
       .select(`
         id,
         order_number,
-        customer_id,
+        auth_id,
         created_at,
         printed_at,
         cashier,
@@ -24,9 +24,9 @@ export async function getOrderData() {
         income_amount,
         payment_method,
         status,
-        customer:customers (
+        customer:auth_id (
           id,
-          name,
+          username,
           address,
           phone_number
         ),
@@ -46,7 +46,7 @@ export async function getOrderData() {
     const transformedOrders: Order[] = orders?.map((order: any) => ({
       id: order.id,
       order_number: order.order_number,
-      customer_id: order.customer_id,
+      auth_id: order.auth_id,
       created_at: order.created_at,
       printed_at: order.printed_at,
       cashier: order.cashier,
@@ -78,9 +78,9 @@ export async function getOrderById(id: UUID) {
       .from('orders')
       .select(`
         *,
-        customer:customers (
+        customer:auth_id (
           id,
-          name,
+          username,
           address,
           phone_number
         ),
@@ -182,13 +182,19 @@ export async function deleteOrder(id: UUID) {
   }
 }
 
-// Get orders by customer ID
-export async function getOrdersByCustomerId(customerId: UUID) {
+// Get orders by user ID
+export async function getOrdersByUserId(userId: UUID) {
   try {
     const { data: orders, error } = await supabase
       .from('orders')
       .select(`
         *,
+        customer:auth_id (
+          id,
+          username,
+          address,
+          phone_number
+        ),
         order_products (
           id,
           product_id,
@@ -198,13 +204,13 @@ export async function getOrdersByCustomerId(customerId: UUID) {
           subtotal
         )
       `)
-      .eq('customer_id', customerId)
+      .eq('auth_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
     return orders
   } catch (error) {
-    console.error('Error fetching customer orders:', error)
+    console.error('Error fetching orders by user ID:', error)
     throw error
   }
 }

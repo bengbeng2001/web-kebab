@@ -3,11 +3,9 @@ import { Product } from "./product_interface";
 
 export interface Customer {
   id: UUID;
-  name: string;
+  username: string;
   address: string;
   phone_number: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface OrderProduct {
@@ -36,7 +34,7 @@ export interface Order {
   income_amount: number;
   payment_method: string;
   status: string;
-  customer_id: UUID;
+  auth_id: UUID;
   customer?: Customer;
   order_products?: OrderProduct[];
 } 

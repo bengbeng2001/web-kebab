@@ -20,9 +20,11 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [roles, setRoles] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -53,12 +55,23 @@ export function LoginForm({
         <CardHeader>
           <CardTitle className="text-2xl text-center">KEBAB SAYANK</CardTitle>
           <CardDescription className="text-center">
-            Enter your email below to login to your account
+            Enter your username below to login to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin}>
             <div className="flex flex-col gap-6">
+            <div className="grid gap-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="username"
+                  placeholder="arifin55"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -93,7 +106,7 @@ export function LoginForm({
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </div>
-            {/* <div className="mt-4 text-center text-sm">
+            <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
               <Link
                 href="/auth/sign-up"
@@ -101,7 +114,7 @@ export function LoginForm({
               >
                 Sign up
               </Link>
-            </div> */}
+            </div>
           </form>
         </CardContent>
       </Card>

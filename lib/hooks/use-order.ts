@@ -7,7 +7,7 @@ import {
   createOrderProducts,
   updateOrder,
   deleteOrder,
-  getOrdersByCustomerId
+  getOrdersByUserId
 } from '../services/order'
 import { UUID } from 'node:crypto'
 
@@ -56,15 +56,15 @@ export function useOrder(id: UUID) {
 }
 
 // Hook untuk mendapatkan order berdasarkan customer ID
-export function useCustomerOrders(customerId: UUID) {
+export function useUserOrders(userId: UUID) {
   const [data, setData] = useState<Order[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchCustomerOrders = async () => {
+  const fetchUserOrders = async () => {
     try {
       setLoading(true)
-      const result = await getOrdersByCustomerId(customerId)
+      const result = await getOrdersByUserId(userId)
       setData(result)
       setError(null)
     } catch (err) {
@@ -74,7 +74,7 @@ export function useCustomerOrders(customerId: UUID) {
     }
   }
 
-  return { data, loading, error, fetchCustomerOrders }
+  return { data, loading, error, fetchUserOrders }
 }
 
 // Hook untuk membuat order baru
