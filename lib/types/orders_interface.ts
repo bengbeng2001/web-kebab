@@ -1,5 +1,4 @@
 import { UUID } from "node:crypto";
-import { Product } from "./product_interface";
 
 export interface Customer {
   id: UUID;

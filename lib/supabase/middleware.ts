@@ -45,12 +45,9 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // const currentPath = request.nextUrl.pathname; // Mendapatkan pathname dari permintaan saat ini
-  // const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL; // Mengecek apakah peran adalah 'admin'
   const isCustomer = user?.user_metadata.role === 'customer'; // Mengecek apakah peran adalah 'customer'
   const isAdmin = user?.user_metadata.role === 'admin'; // Mengecek apakah peran adalah 'customer'
-
-  console.log(isCustomer);
+  
   if (request.nextUrl.pathname.startsWith("/customer")) {
     if (isCustomer) {
       return supabaseResponse;

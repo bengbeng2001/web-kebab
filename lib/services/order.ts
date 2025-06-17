@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { Order, OrderProduct, Customer } from '../types/orders_interface'
 import { UUID } from "node:crypto";
-import { PostgrestError } from '@supabase/supabase-js'
 
 // Get all orders with their related data
 export async function getOrderData() {
