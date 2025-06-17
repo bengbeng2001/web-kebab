@@ -161,10 +161,133 @@ function OrdersContent() {
 
     try {
       const orderToPrint = selectedOrderForPayment;
+      const dateFormatter = new Intl.DateTimeFormat('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
 
-      // Generate and download the PDF
-      const pdfDoc = generateReceiptPDF(orderToPrint);
-      pdfDoc.download(`Resi_Pesanan_${orderToPrint.order_number}.pdf`);
+      const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Resi Pesanan #${orderToPrint.order_number}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 16px; }
+          .receipt { max-width: 100%; margin: 0 auto; }
+          .header { text-align: center; margin-bottom: 16px; }
+          .header h1 { font-size: 1.25rem; font-weight: bold; margin: 0; }
+          .header p { font-size: 0.75rem; margin: 4px 0; }
+          .info { font-size: 0.875rem; margin-bottom: 16px; }
+          .divider { border-top: 2px dashed #ccc; margin: 16px 0; }
+          table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+          th, td { padding: 4px; text-align: left; }
+          th { font-weight: bold; }
+          .total { font-size: 0.875rem; margin: 16px 0; }
+          .total-row { display: flex; justify-content: space-between; margin: 4px 0; }
+          .footer { text-align: center; font-size: 0.875rem; margin-top: 16px; }
+          @media print {
+            body { margin: 0; }
+            .receipt { width: 80mm; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="header">
+            <h1>Kebab Sayank</h1>
+            <p>Jl. Karang Menjangan No.75, Airlangga, Kec. Gubeng, Surabaya, Jawa Timur 60286</p>
+          </div>
+
+          <div class="info">
+            <p>No. Pesanan: #${orderToPrint.order_number}</p>
+            <p>Nama Customer: ${orderToPrint.customer?.username || ''}</p>
+            <p>No. Telp: ${orderToPrint.customer?.phone || ''}</p>
+            <p>Alamat Customer: ${orderToPrint.customer?.address || ''}</p>
+          </div>
+
+          <div class="info">
+            <p>Tanggal Cetak: ${dateFormatter.format(new Date())}</p>
+            <p>Kasir: ${orderToPrint.cashier}</p>
+            <p>Tipe: ${orderToPrint.order_type}</p>
+            <p>Metode Bayar: ${orderToPrint.payment_method}</p>
+          </div>
+
+          <div class="divider"></div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th style="text-align: right">Qty</th>
+                <th style="text-align: right">Harga</th>
+                <th style="text-align: right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orderToPrint.order_products?.map(item => `
+                <tr>
+                  <td>${item.product_name}</td>
+                  <td style="text-align: right">${item.quantity}</td>
+                  <td style="text-align: right">Rp. ${(item.price || 0).toLocaleString('id-ID')}</td>
+                  <td style="text-align: right">Rp. ${(item.subtotal || 0).toLocaleString('id-ID')}</td>
+                </tr>
+              `).join('') || ''}
+            </tbody>
+          </table>
+
+          <div class="divider"></div>
+
+          <div class="total">
+            <div class="total-row">
+              <span>Total Produk:</span>
+              <span>${orderToPrint.total_items || 0}</span>
+            </div>
+            <div class="total-row" style="font-weight: bold">
+              <span>Total Harga:</span>
+              <span>Rp. ${(orderToPrint.total_price || 0).toLocaleString('id-ID')}</span>
+            </div>
+            <div class="total-row">
+              <span>Jumlah Bayar:</span>
+              <span>Rp. ${(orderToPrint.payment_amount || 0).toLocaleString('id-ID')}</span>
+            </div>
+            <div class="total-row">
+              <span>STATUS:</span>
+              <span>${(orderToPrint.status || '').toUpperCase()}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>Terima kasih atas kunjungan Anda</p>
+            <p>Bila Ada Kritik saran silahkan hubungi kami</p>
+            <p>0858-2024-7769 (WhatsApp)</p>
+          </div>
+        </div>
+      </body>
+      </html>
+      `;
+
+      // Create a blob from the HTML content
+      const blob = new Blob([printContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create a temporary link element
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Resi_Pesanan_${orderToPrint.order_number}.html`;
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url);
 
       // Open WhatsApp confirmation dialog
       setSelectedOrderForWhatsapp(orderToPrint);
@@ -193,101 +316,11 @@ function OrdersContent() {
 
   const handlePrintReceipt = async (orderToPrint: Order) => {
     try {
-      const dateFormatter = new Intl.DateTimeFormat('id-ID', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
+      // Generate and download PDF
+      const pdfDoc = generateReceiptPDF(orderToPrint);
+      pdfDoc.download(`Resi_Pesanan_${orderToPrint.order_number}.pdf`);
 
-      const printContent = `
-      <style>
-        @media print {
-        @page { margin: 0; size: auto; }
-        body { margin: 0; }
-        }
-      </style>
-        <div style="width: 148mm; min-height: 210mm; margin: 0 auto; background-color: white; color: black; padding: 16px;">
-            <div style="text-align: center; margin-bottom: 16px;">
-                <h1 style="font-size: 1.25rem; font-weight: bold;">Kebab Sayank</h1>
-                <p style="font-size: 0.500rem;">Jl. Karang Menjangan No.75, Airlangga, Kec. Gubeng, Surabaya, Jawa Timur 60286</p>
-            </div>
-
-            <div style="font-size: 0.875rem; margin-bottom: 16px;">
-                <p>No. Pesanan: #${orderToPrint.order_number}</p>
-                <p>Nama Customer: ${orderToPrint.customer?.username || ''}</p>
-                <p>No. Telp: ${orderToPrint.customer?.phone || ''}</p>
-                <p>Alamat Customer: ${orderToPrint.customer?.address || ''}</p>
-            </div>   
-
-            <div style="font-size: 0.875rem; margin-bottom: 16px;">
-                <p>Tanggal Cetak: ${dateFormatter.format(new Date())}</p>
-                <p>Kasir: ${orderToPrint.cashier}</p>
-                <p>Tipe: ${orderToPrint.order_type}</p>
-                <p>Metode Bayar: ${orderToPrint.payment_method}</p>
-            </div>
-            <div style="border-top: 2px dashed gray; margin: 16px 0 8px 0;"></div>
-            
-            <div style="border-top: 1px dashed gray; border-bottom: 1px; padding-top: 8px; padding-bottom: 8px; margin-bottom: 16px;">
-                <table style="width: 100%; font-size: 0.875rem;">
-                    <thead>
-                        <tr style="border-bottom: 1px dashed gray;">
-                            <th style="text-align: left;">Item</th>
-                            <th style="text-align: right;">Qty</th>
-                            <th style="text-align: right;">Harga</th>
-                            <th style="text-align: right;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${orderToPrint.order_products?.map(item => `
-                            <tr style="border-bottom: 1px dashed gray;">
-                                <td>${item.product_name}</td>
-                                <td style="text-align: right;">${item.quantity}</td>
-                                <td style="text-align: right;">Rp. ${(item.price || 0).toLocaleString('id-ID')}</td>
-                                <td style="text-align: right;">Rp. ${(item.subtotal || 0).toLocaleString('id-ID')}</td>
-                            </tr>
-                        `).join('') || ''}
-                    </tbody>
-                </table>
-            </div>
-            <div style="border-top: 2px dashed gray; margin: 16px 0 8px 0;"></div>
-
-            <div style="font-size: 0.875rem; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Total Produk:</span>
-                    <span>${orderToPrint.total_items || 0}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                    <span>Total Harga:</span>
-                    <span>Rp. ${(orderToPrint.total_price || 0).toLocaleString('id-ID')}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Jumlah Bayar:</span>
-                    <span>Rp. ${(orderToPrint.payment_amount || 0).toLocaleString('id-ID')}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>STATUS:</span>
-                    <span>${(orderToPrint.status || '').toUpperCase()}</span>
-                </div>
-            </div>
-
-            <div style="text-align: center; font-size: 0.875rem;">
-                <p>Terima kasih atas kunjungan Anda <br> Bila Ada Kritik saran silahkan hubungi kami <br> 0858-2024-7769 (WhatsApp)</p>
-            </div>
-        </div>
-    `;
-
-      const printWindow = window.open('', '_blank', 'height=600,width=800');
-      if (printWindow) {
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      }
-
+      // Update printed_at status di database
       const { error } = await supabase
         .from('orders')
         .update({ printed_at: new Date().toISOString() })
