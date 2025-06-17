@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +34,7 @@ interface OrderProduct {
   subtotal: number;
 }
 
-export default function OrdersPage() {
+function OrdersContent() {
   const searchParams = useSearchParams();
   const authUserId = searchParams.get('userId');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -203,7 +203,13 @@ export default function OrdersPage() {
       });
 
       const printContent = `
-        <div style="max-width: 80mm; margin: 0 auto; background-color: white; color: black; padding: 16px;">
+      <style>
+        @media print {
+        @page { margin: 0; size: auto; }
+        body { margin: 0; }
+        }
+      </style>
+        <div style="width: 148mm; min-height: 210mm; margin: 0 auto; background-color: white; color: black; padding: 16px;">
             <div style="text-align: center; margin-bottom: 16px;">
                 <h1 style="font-size: 1.25rem; font-weight: bold;">Kebab Sayank</h1>
                 <p style="font-size: 0.500rem;">Jl. Karang Menjangan No.75, Airlangga, Kec. Gubeng, Surabaya, Jawa Timur 60286</p>
@@ -222,7 +228,8 @@ export default function OrdersPage() {
                 <p>Tipe: ${orderToPrint.order_type}</p>
                 <p>Metode Bayar: ${orderToPrint.payment_method}</p>
             </div>
-
+            <div style="border-top: 2px dashed gray; margin: 16px 0 8px 0;"></div>
+            
             <div style="border-top: 1px dashed gray; border-bottom: 1px; padding-top: 8px; padding-bottom: 8px; margin-bottom: 16px;">
                 <table style="width: 100%; font-size: 0.875rem;">
                     <thead>
@@ -245,6 +252,7 @@ export default function OrdersPage() {
                     </tbody>
                 </table>
             </div>
+            <div style="border-top: 2px dashed gray; margin: 16px 0 8px 0;"></div>
 
             <div style="font-size: 0.875rem; margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between;">
@@ -488,5 +496,13 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
     </main>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OrdersContent />
+    </Suspense>
   );
 } 

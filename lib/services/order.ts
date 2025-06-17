@@ -62,13 +62,23 @@ export async function getOrderById(id: UUID) {
 export async function createOrder(orderData: Omit<Order, 'id' | 'created_at' | 'customer' | 'order_products'>) {
   const supabase = createClient();
   try {
-    const { data, error } = await supabase
+    const { data: newOrder, error } = await supabase
       .from('orders')
       .insert([orderData])
-      .select()
+      .select(`
+        *,
+        customer:users_public!public_users_id (
+          id,
+          username,
+          phone,
+          address
+        ),
+        order_products (*)
+      `)
+      .single()
 
     if (error) throw error
-    return data
+    return newOrder
   } catch (error) {
     console.error('Error creating order:', error)
     throw error

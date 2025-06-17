@@ -304,11 +304,11 @@ export default function OrderPage() {
         printed_at: null
       });
 
-      if (!newOrderData || !Array.isArray(newOrderData) || newOrderData.length === 0) {
+      if (!newOrderData) {
         throw new Error('Failed to create order - no data returned');
       }
 
-      const createdOrder = newOrderData[0] as Order;
+      const createdOrder = newOrderData as Order;
       console.log('Order created successfully:', createdOrder);
 
       // Create order products

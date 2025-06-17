@@ -159,7 +159,7 @@ export function SignUpForm() {
             <Input
               id="username"
               type="text"
-              placeholder="arifin55"
+              placeholder="alif"
               required
               value={formData.username}
               onChange={handleChange}
@@ -173,7 +173,7 @@ export function SignUpForm() {
             <Input
               id="email"
               type="email"
-              placeholder="m@example.com"
+              placeholder="alif@gmail.com"
               required
               value={formData.email}
               onChange={handleChange}
@@ -210,6 +210,7 @@ export function SignUpForm() {
               value={formData.password}
               onChange={handleChange}
               minLength={6}
+              placeholder="minimal 6 huruf"
             />
           </div>
           <div>
@@ -220,6 +221,7 @@ export function SignUpForm() {
               required
               value={formData.repeatPassword}
               onChange={handleChange}
+              placeholder="minimal 6 huruf"
             />
           </div>
 
