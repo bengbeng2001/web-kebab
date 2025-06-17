@@ -2,24 +2,23 @@
 
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
 
 export default function OrderPage() {
-  const handleWhatsAppClick = () => {
-    // Ganti nomor WhatsApp sesuai kebutuhan
-    const phoneNumber = "6285820247769";
-    const message = "Halo, saya ingin memesan kebab";
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-  };
+  const router = useRouter();
 
+  const handlePesanSekarang = () => {
+    router.push('/customer');
+  };
+  
   return (
     <main className="flex min-h-screen flex-col items-center">
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
         {/* Hero Section */}
         <div className="w-full relative h-[500px]">
           <Image
-            src="https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?q=80&w=1000&auto=format&fit=crop"
-            alt="Kebab Sayank"
+            src="/images/Burger.jpg"
+            alt="Burger"
             fill
             className="object-cover"
           />
@@ -76,10 +75,10 @@ export default function OrderPage() {
               Dapatkan promo khusus untuk pemesanan hari ini
             </p>
             <Button 
-              onClick={handleWhatsAppClick}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg"
+              onClick={handlePesanSekarang}
+              className="bg-primary hover:bg-primary/90 dark:text-black text-white px-8 py-6 text-lg"
             >
-              Hubungi Kami di WhatsApp
+              Pesan Sekarang
             </Button>
           </div>
         </div>

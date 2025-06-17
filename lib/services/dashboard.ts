@@ -34,6 +34,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       name: prod.name,
       description: prod.description,
       price: prod.price,
+      stock: prod.stock || 0,
       created_at: prod.created_at
     })) || []
 
