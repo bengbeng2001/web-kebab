@@ -14,67 +14,31 @@ import { Button } from "@/components/ui/button";
 import { SkeletonCard } from '@/components/skeleton';
 import { ErrorCard } from '@/components/error-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url: string;
-  id_categories: string;
-  created_at: string;
-  categories: Category;
-}
+import { useCategories } from '@/lib/hooks/use-category';
+import { useProducts } from '@/lib/hooks/use-product';
 
 export default function MenuPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch categories
-      const categoriesResponse = await fetch('/api/categories');
-      if (!categoriesResponse.ok) throw new Error('Failed to fetch categories');
-      const { categories } = await categoriesResponse.json();
-      setCategories(categories);
-
-      // Fetch products
-      const productsResponse = await fetch('/api/products');
-      if (!productsResponse.ok) throw new Error('Failed to fetch products');
-      const { products } = await productsResponse.json();
-      setProducts(products);
-
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setLoading(false);
-    }
-  };
+  const { data: categoriesData, loading: categoriesLoading, error: categoriesError, fetchCategories } = useCategories();
+  const { data: productsData, loading: productsLoading, error: productsError, fetchProducts } = useProducts();
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchCategories();
+    fetchProducts();
+  }, [fetchCategories, fetchProducts]);
 
   // Filter products based on selected category
-  const filteredProducts = selectedCategory
-    ? products.filter(product => product.categories?.id === selectedCategory)
-    : products;
+  const filteredProducts = selectedCategory && productsData
+    ? productsData.products.filter(product => 
+        product.categories?.some(category => category.id === selectedCategory)
+      )
+    : productsData?.products || [];
 
-  if (loading) return <SkeletonCard/>;
-  if (error) return <ErrorCard message={error} onRetry={fetchData} />;
+  if (categoriesLoading || productsLoading) return <SkeletonCard/>;
+  if (categoriesError || productsError) return <ErrorCard message={categoriesError || productsError || 'An error occurred'} onRetry={() => {
+    fetchCategories();
+    fetchProducts();
+  }} />;
 
   return (
     <div className="container mx-auto p-4">
@@ -96,7 +60,7 @@ export default function MenuPage() {
               >
                 Semua Menu
               </Button>
-              {categories.map((category) => (
+              {categoriesData?.categories.map((category) => (
                 <Button
                   key={category.id}
                   variant={selectedCategory === category.id ? "default" : "outline"}
@@ -111,24 +75,24 @@ export default function MenuPage() {
             </div>
 
             {/* Category Filter Dropdown (Visible below MD) */}
-             <div className="md:hidden mb-4">
-                <Select
-                   value={selectedCategory || 'all'}
-                   onValueChange={(value) => setSelectedCategory(value === 'all' ? null : value)}
-                >
-                   <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih Kategori" />
-                   </SelectTrigger>
-                   <SelectContent>
-                      <SelectItem value="all">Semua Menu</SelectItem>
-                       {categories.map((category) => (
-                         <SelectItem key={category.id} value={category.id}>
-                           {category.name}
-                         </SelectItem>
-                       ))}
-                   </SelectContent>
-                </Select>
-             </div>
+            <div className="md:hidden mb-4">
+              <Select
+                value={selectedCategory || 'all'}
+                onValueChange={(value) => setSelectedCategory(value === 'all' ? null : value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Menu</SelectItem>
+                  {categoriesData?.categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Categories Table (Visible on MD and above) */}
             <div className="hidden md:block">
@@ -140,7 +104,7 @@ export default function MenuPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {categories.map((category) => (
+                  {categoriesData?.categories.map((category) => (
                     <TableRow 
                       key={category.id}
                       className={`cursor-pointer hover:bg-muted/50 ${
@@ -166,22 +130,25 @@ export default function MenuPage() {
             <CardTitle>Daftar Menu</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Apply responsiveness to the Products Table */}
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[120px]">Nama Menu</TableHead>
-                    <TableHead className="min-w-[180px] hidden md:table-cell">Deskripsi</TableHead>
-                    <TableHead className="min-w-[90px]">Harga</TableHead>
+                    <TableHead>No</TableHead>
+                    <TableHead>Nama</TableHead>
+                    <TableHead className="hidden md:table-cell">Deskripsi</TableHead>
+                    <TableHead>Harga</TableHead>
+                    <TableHead>Stok</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.map((product) => (
+                  {filteredProducts.map((product, index) => (
                     <TableRow key={product.id}>
-                      <TableCell className="font-medium text-sm">{product.name}</TableCell>
-                      <TableCell className="text-sm hidden md:table-cell truncate max-w-[180px]">{product.description}</TableCell>
-                      <TableCell className="text-sm">Rp {product.price.toLocaleString()}</TableCell>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell className="hidden md:table-cell">{product.description}</TableCell>
+                      <TableCell>Rp. {(product.price || 0).toLocaleString('id-ID')}</TableCell>
+                      <TableCell>{product.stock}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

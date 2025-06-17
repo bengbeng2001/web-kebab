@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { hasEnvVars } from "../utils";
+import { hasEnvVars } from "@/lib/utils";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -45,6 +45,30 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const isCustomer = user?.user_metadata.role === 'customer'; // Mengecek apakah peran adalah 'customer'
+  const isAdmin = user?.user_metadata.role === 'admin'; // Mengecek apakah peran adalah 'customer'
+  
+  if (request.nextUrl.pathname.startsWith("/customer")) {
+    if (isCustomer) {
+      return supabaseResponse;
+    } 
+    if(isAdmin){
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.rewrite(url);
+    }
+  }
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    if (isAdmin) {
+      return supabaseResponse;
+    } 
+    if (isCustomer) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.rewrite(url);
+    } 
+  }
+
   if (
     request.nextUrl.pathname !== "/" &&
     !user &&
@@ -53,15 +77,14 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/menu") &&
     !request.nextUrl.pathname.startsWith("/about") &&
     !request.nextUrl.pathname.startsWith("/order") &&
-    !request.nextUrl.pathname.startsWith("/location")&&
-    !request.nextUrl.pathname.startsWith("/api/products")&&
-    !request.nextUrl.pathname.startsWith("/api/categories")
+    !request.nextUrl.pathname.startsWith("/location")
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
+
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

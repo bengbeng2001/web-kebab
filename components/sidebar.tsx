@@ -6,8 +6,9 @@ import {
   LayoutDashboard, 
   Tag, 
   Package,
-  BookOpen,
+  ShoppingCart,
   Menu,
+  HistoryIcon,
   X
 } from 'lucide-react'
 import { useState } from 'react'
@@ -31,7 +32,12 @@ export function Sidebar() {
       title: 'Produk',
       href: '/admin/product',
       icon: Package
-    }
+    },
+    {
+      title: 'Pesanan',
+      href: '/admin/order',
+      icon: ShoppingCart
+    },
   ]
 
   return (
@@ -48,7 +54,8 @@ export function Sidebar() {
       <div className={`
         fixed lg:static
         top-0 left-0
-        h-screen w-64
+        h-full min-h-screen
+        w-64
         flex flex-col
         bg-background border-r
         transform transition-transform duration-300 ease-in-out

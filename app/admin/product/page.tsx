@@ -39,6 +39,9 @@ export default function ProductPage() {
   const { update, loading: updateLoading, error: updateError } = useUpdateProduct();
   const { remove, loading: deleteLoading, error: deleteError } = useDeleteProduct();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+  const itemsPerPage = 10;
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -47,10 +50,12 @@ export default function ProductPage() {
   const [newProductName, setNewProductName] = useState('');
   const [newProductDescription, setNewProductDescription] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
+  const [newProductStock, setNewProductStock] = useState('');
   const [newProductCategory, setNewProductCategory] = useState<string | undefined>(undefined);
   const [editProductName, setEditProductName] = useState('');
   const [editProductDescription, setEditProductDescription] = useState('');
   const [editProductPrice, setEditProductPrice] = useState('');
+  const [editProductStock, setEditProductStock] = useState('');
   const [editProductCategory, setEditProductCategory] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -77,42 +82,34 @@ export default function ProductPage() {
   }, [createError, updateError, deleteError]);
 
   const validateNewProduct = () => {
-    if (!data?.products) return true; // Allow creation if no products loaded yet
-    // Check for duplicate name
-    const isNameDuplicate = data.products.some(
-      (product: Product) => product.name.toLowerCase() === newProductName.trim().toLowerCase()
-    );
-    if (isNameDuplicate) {
-      setErrorMessage('Nama produk sudah ada');
+    if (!newProductName.trim()) {
+      setErrorMessage('Nama produk harus diisi');
       return false;
     }
-
-    if (!newProductCategory) {
-      setErrorMessage('Pilih kategori produk');
+    if (!newProductPrice.trim() || isNaN(parseInt(newProductPrice)) || parseInt(newProductPrice) <= 0) {
+      setErrorMessage('Harga produk harus berupa angka positif');
       return false;
     }
-
-    setErrorMessage(null);
+    if (!newProductStock.trim() || isNaN(parseInt(newProductStock)) || parseInt(newProductStock) < 0) {
+      setErrorMessage('Stok produk harus berupa angka non-negatif');
+      return false;
+    }
     return true;
   };
 
    const validateEditProduct = () => {
-    if (!data?.products || !selectedProduct) return true; 
-    // Check for duplicate name, excluding the current product being edited
-    const isNameDuplicate = data.products.some(
-      (product: Product) => product.id !== selectedProduct.id && product.name.toLowerCase() === editProductName.trim().toLowerCase()
-    );
-    if (isNameDuplicate) {
-      setErrorMessage('Nama produk sudah ada');
+    if (!editProductName.trim()) {
+      setErrorMessage('Nama produk harus diisi');
       return false;
     }
-
-     if (!editProductCategory) {
-      setErrorMessage('Pilih kategori produk');
+    if (!editProductPrice.trim() || isNaN(parseInt(editProductPrice)) || parseInt(editProductPrice) <= 0) {
+      setErrorMessage('Harga produk harus berupa angka positif');
       return false;
     }
-
-    setErrorMessage(null);
+    if (!editProductStock.trim() || isNaN(parseInt(editProductStock)) || parseInt(editProductStock) < 0) {
+      setErrorMessage('Stok produk harus berupa angka non-negatif');
+      return false;
+    }
     return true;
   };
 
@@ -120,15 +117,16 @@ export default function ProductPage() {
     if (!validateNewProduct()) return;
     try {
       await create({
-        id: crypto.randomUUID() as UUID,
         name: newProductName.trim(),
         description: newProductDescription.trim(),
-        price: parseFloat(newProductPrice),
+        price: parseInt(newProductPrice),
+        stock: parseInt(newProductStock),
         id_categories: newProductCategory ? (newProductCategory as UUID) : null,
       });
       setNewProductName('');
       setNewProductDescription('');
       setNewProductPrice('');
+      setNewProductStock('');
       setNewProductCategory(undefined);
       setIsCreateDialogOpen(false);
       fetchProducts();
@@ -143,12 +141,14 @@ export default function ProductPage() {
       await update(selectedProduct.id, {
         name: editProductName.trim(),
         description: editProductDescription.trim(),
-        price: parseFloat(editProductPrice),
+        price: parseInt(editProductPrice),
+        stock: parseInt(editProductStock),
         id_categories: editProductCategory ? (editProductCategory as UUID) : null,
       });
       setEditProductName('');
       setEditProductDescription('');
       setEditProductPrice('');
+      setEditProductStock('');
       setEditProductCategory(undefined);
       setSelectedProduct(null);
       setIsEditDialogOpen(false);
@@ -171,6 +171,27 @@ export default function ProductPage() {
     }
   };
 
+  // Calculate pagination with filter
+  const filteredProducts = data?.products.filter(product => 
+    !selectedCategory || 
+    (product.categories && 
+     Array.isArray(product.categories) && 
+     product.categories.some(cat => cat.id === selectedCategory))
+  ) || [];
+
+  const totalItems = filteredProducts.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentProducts = filteredProducts
+    .sort((a: Product, b: Product) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(startIndex, endIndex);
+
+  // Reset to first page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory]);
+
   if (loading) return <SkeletonCard/>;
   // Display main error if fetching products failed
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
@@ -185,6 +206,7 @@ export default function ProductPage() {
             setNewProductName('');
             setNewProductDescription('');
             setNewProductPrice('');
+            setNewProductStock('');
             setNewProductCategory(undefined);
             setErrorMessage(null);
           }
@@ -235,6 +257,18 @@ export default function ProductPage() {
                 />
               </div>
               <div className="space-y-2">
+                <label className="text-sm font-medium">Stok</label>
+                <Input
+                  type="number"
+                  placeholder="Masukkan Stok Produk"
+                  value={newProductStock}
+                  onChange={(e) => {
+                    setNewProductStock(e.target.value);
+                    setErrorMessage(null);
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Kategori</label>
                 <Select
                   value={newProductCategory}
@@ -260,7 +294,7 @@ export default function ProductPage() {
               )}
               <Button 
                 onClick={handleCreate} 
-                disabled={createLoading || !newProductName.trim() || !newProductPrice.trim() || newProductCategory === undefined}
+                disabled={createLoading || !newProductName.trim() || !newProductPrice.trim() || !newProductStock.trim() || newProductCategory === undefined}
                 className="w-full"
               >
                 {createLoading ? 'Menyimpan...' : 'Simpan'}
@@ -271,25 +305,44 @@ export default function ProductPage() {
       </div>
 
       <div className="border rounded-lg">
+        <div className="p-4 border-b">
+          <div className="flex items-center gap-4">
+            <div className="w-[200px]">
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[40px] text-xs">No</TableHead>
-                <TableHead className="min-w-[120px] text-xs">Nama Produk</TableHead>
-                <TableHead className="min-w-[180px] text-xs hidden md:table-cell">Deskripsi</TableHead>
-                <TableHead className="min-w-[100px] text-xs">Kategori</TableHead>
-                <TableHead className="min-w-[90px] text-xs">Harga</TableHead>
-                <TableHead className="min-w-[110px] text-xs hidden sm:table-cell">Tanggal Dibuat</TableHead>
-                <TableHead className="w-[80px] text-xs text-center">Aksi</TableHead>
+                <TableHead className="w-[50px]">No</TableHead>
+                <TableHead>Nama</TableHead>
+                <TableHead className="hidden md:table-cell">Deskripsi</TableHead>
+                <TableHead>Kategori</TableHead>
+                <TableHead>Harga</TableHead>
+                <TableHead>Stok</TableHead>
+                <TableHead className="text-center">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.products
-                .sort((a: Product, b: Product) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                .map((product: Product, index: number) => (
+              {currentProducts?.map((product: Product, index: number) => (
                 <TableRow key={product.id}>
-                  <TableCell className="font-medium text-xs">{index + 1}</TableCell>
+                  <TableCell className="font-medium text-xs">{startIndex + index + 1}</TableCell>
                   <TableCell className="font-medium text-xs">{product.name}</TableCell>
                   <TableCell className="max-w-[180px] truncate text-xs hidden md:table-cell">{product.description}</TableCell>
                   <TableCell className="text-xs">
@@ -302,9 +355,7 @@ export default function ProductPage() {
                     }
                   </TableCell>
                   <TableCell className="text-xs">Rp. {product.price}</TableCell>
-                  <TableCell className="text-xs hidden sm:table-cell">
-                    {new Date(product.created_at).toLocaleDateString()}
-                  </TableCell>
+                  <TableCell className="text-xs">{product.stock}</TableCell>
                   <TableCell>
                     <div className="flex justify-center space-x-2">
                       <Button
@@ -312,9 +363,10 @@ export default function ProductPage() {
                         size="icon"
                         onClick={() => {
                           setSelectedProduct(product);
-                          setEditProductName(product.name);
-                          setEditProductDescription(product.description);
-                          setEditProductPrice(product.price.toString());
+                          setEditProductName(product.name || '');
+                          setEditProductDescription(product.description || '');
+                          setEditProductPrice(product.price?.toString() || '');
+                          setEditProductStock(product.stock?.toString() || '');
                           setEditProductCategory(product.categories?.[0]?.id);
                           setIsEditDialogOpen(true);
                         }}
@@ -338,6 +390,44 @@ export default function ProductPage() {
             </TableBody>
           </Table>
         </div>
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              Menampilkan {totalItems} produk
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
       </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
@@ -346,6 +436,7 @@ export default function ProductPage() {
           setEditProductName('');
           setEditProductDescription('');
           setEditProductPrice('');
+          setEditProductStock('');
           setEditProductCategory(undefined);
           setSelectedProduct(null);
           setErrorMessage(null);
@@ -381,6 +472,15 @@ export default function ProductPage() {
                 onChange={(e) => setEditProductPrice(e.target.value)}
               />
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Stok</label>
+              <Input
+                type="number"
+                placeholder="Stok Produk"
+                value={editProductStock}
+                onChange={(e) => setEditProductStock(e.target.value)}
+              />
+            </div>
              <div className="space-y-2">
                 <label className="text-sm font-medium">Kategori</label>
                 <Select
@@ -407,7 +507,7 @@ export default function ProductPage() {
             )}
             <Button 
               onClick={handleEdit} 
-              disabled={updateLoading || !editProductName.trim() || !editProductPrice.trim() || editProductCategory === undefined}
+              disabled={updateLoading || !editProductName.trim() || !editProductPrice.trim() || !editProductStock.trim() || editProductCategory === undefined}
               className="w-full"
             >
               {updateLoading ? 'Menyimpan Perubahan...' : 'Simpan Perubahan'}

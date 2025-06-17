@@ -1,7 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import QrisImage from './qris.png'; // Import gambar QRIS
 
 export default function LocationPage() {
 
@@ -18,8 +17,8 @@ export default function LocationPage() {
         {/* Hero Section with Map Background */}
         <div className="relative w-full h-[400px]">
           <Image
-            src="/images/rotimaryam.png"
-            alt="Lokasi Kebab Sayank"
+            src="/images/Burger.jpg"
+            alt="Burger"
             fill
             className="object-cover"
             priority
@@ -61,20 +60,6 @@ export default function LocationPage() {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               ></iframe>
-            </div>
-
-            {/* QRIS Image */}
-            <div className="w-full md:w-1/4 flex flex-col items-center">
-              <h3 className="text-xl font-semibold mb-2">Scan untuk QRIS</h3>
-              <div className="relative w-48 h-48">
-                <Image
-                  src={QrisImage} // Gunakan objek gambar yang diimport
-                  alt="QRIS Kebab Sayank"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-              <p className="text-sm text-gray-500 mt-2">Scan kode QR untuk pembayaran</p>
             </div>
           </div>
         </div>

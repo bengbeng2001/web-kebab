@@ -1,3 +1,5 @@
+import { MainButton } from "@/components/main-button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,17 +14,17 @@ export default function Page() {
       <div className="w-full max-w-sm">
         <div className="flex flex-col gap-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="text-center">
               <CardTitle className="text-2xl">
                 Thank you for signing up!
               </CardTitle>
-              <CardDescription>Check your email to confirm</CardDescription>
+              <CardDescription>Ok Time to Order some foods</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="text-center">
               <p className="text-sm text-muted-foreground">
-                You&apos;ve successfully signed up. Please check your email to
-                confirm your account before signing in.
+               Click Here to Order
               </p>
+              <MainButton/>
             </CardContent>
           </Card>
         </div>

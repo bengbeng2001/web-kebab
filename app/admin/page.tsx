@@ -1,142 +1,85 @@
-'use client';
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Package, Tag } from "lucide-react"
-import { useDashboard } from "@/lib/hooks/use-dashboard"
-import { SkeletonCard } from "@/components/skeleton";
+import { SummaryCard } from "@/components/admin/summary-card"
+import { CategoryOverview } from "@/components/admin/category-overview"
+import { RecentCategories } from "@/components/admin/recent-categories"
+import { RecentProducts } from "@/components/admin/recent-products"
+import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
 
-export default function DashboardPage() {
-    const { data, loading, error } = useDashboard()
+async function getDashboardData() {
+  const supabase = await createClient()
 
-    if (loading) {
-        return <SkeletonCard/>
-    }
+  // Check authentication
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    redirect('/auth/login')
+  }
 
-    if (error) {
-        return (
-            <div className="p-4">
-                <div className="text-red-500 mb-4">Error: {error}</div>
-            </div>
-        )
-    }
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('users_public')
+    .select('role')
+    .eq('auth_id', user.id)
+    .single()
 
-    if (!data) return null
+  if (!profile || profile.role !== 'admin') {
+    redirect('/')
+  }
 
-    return (
-        <div className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Produk</CardTitle>
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{data.totalProducts}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Produk aktif
-                        </p>
-                    </CardContent>
-                </Card>
+  // Get dashboard data
+  const { data: products } = await supabase
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Kategori</CardTitle>
-                        <Tag className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{data.totalCategories}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Kategori aktif
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-            {/* Product Categories Overview */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Persentase Produk dalam Kategori</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {data.categories.map((category) => (
-                            <div key={category.id} className="flex items-center justify-between border-b pb-4">
-                                <div className="flex items-center space-x-4">
-                                    <div>
-                                        <p className="font-medium">{category.name}</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {category.totalProductInCategory}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-muted-foreground">
-                                        {Math.round((category.totalProductInCategory / data.totalProducts) * 100)}% dari total produk
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+  return {
+    totalProducts: products?.length || 0,
+    totalCategories: categories?.length || 0,
+    products: products || [],
+    categories: categories?.map(category => ({
+      ...category,
+      totalProductInCategory: products?.filter(p => p.category_id === category.id).length || 0
+    })) || []
+  }
+}
 
-            {/* Recent Categories */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Kategori Terbaru</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {data.categories.slice(0, 5).map((category) => (
-                            <div key={category.id} className="flex items-center justify-between border-b pb-4">
-                                <div className="flex items-center space-x-4">
-                                    <div>
-                                        <p className="font-medium">{category.name}</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {category.description}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-muted-foreground">
-                                        {category.totalProductInCategory} produk
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Ditambahkan: {new Date(category.created_at).toLocaleDateString()}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+export default async function DashboardPage() {
+  const data = await getDashboardData()
 
-            {/* Recent Products */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Produk Terbaru</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {data.products.map((product) => (
-                            <div key={product.id} className="flex items-center justify-between border-b pb-4">
-                                <div className="flex items-center space-x-4">
-                                    <div>
-                                        <p className="font-medium">{product.name}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-medium">Rp. {product.price.toLocaleString()}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Ditambahkan: {new Date(product.created_at).toLocaleDateString()}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+        <SummaryCard 
+          title="Total Produk" 
+          value={data.totalProducts} 
+          subtitle="Produk aktif" 
+          icon={Package} 
+        />
+        <SummaryCard 
+          title="Total Kategori" 
+          value={data.totalCategories} 
+          subtitle="Kategori aktif" 
+          icon={Tag} 
+        />
+      </div>
+
+      {/* Category Overview */}
+      <CategoryOverview 
+        categories={data.categories} 
+        totalProducts={data.totalProducts} 
+      />
+
+      {/* Recent Categories */}
+      <RecentCategories categories={data.categories} />
+
+      {/* Recent Products */}
+      <RecentProducts products={data.products} />
+    </div>
+  );
 }
