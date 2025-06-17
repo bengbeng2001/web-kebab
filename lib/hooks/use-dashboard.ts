@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from 'react'
 import { getDashboardData } from '@/lib/services/dashboard'
 import { DashboardData } from '@/lib/types/dashboard_interface'

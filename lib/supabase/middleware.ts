@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { hasEnvVars } from "../utils";
+import { hasEnvVars } from "@/lib/utils";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -45,11 +45,39 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // const currentPath = request.nextUrl.pathname; // Mendapatkan pathname dari permintaan saat ini
+  // const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL; // Mengecek apakah peran adalah 'admin'
+  const isCustomer = user?.user_metadata.role === 'customer'; // Mengecek apakah peran adalah 'customer'
+  const isAdmin = user?.user_metadata.role === 'admin'; // Mengecek apakah peran adalah 'customer'
+
+  console.log(isCustomer);
+  if (request.nextUrl.pathname.startsWith("/customer")) {
+    if (isCustomer) {
+      return supabaseResponse;
+    } 
+    if(isAdmin){
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.rewrite(url);
+    }
+  }
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    if (isAdmin) {
+      return supabaseResponse;
+    } 
+    if (isCustomer) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.rewrite(url);
+    } 
+  }
+
   if (
     request.nextUrl.pathname !== "/" &&
     !user &&
     !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")&&
+    !request.nextUrl.pathname.startsWith("/auth") &&
+    !request.nextUrl.pathname.startsWith("/menu") &&
     !request.nextUrl.pathname.startsWith("/about") &&
     !request.nextUrl.pathname.startsWith("/order") &&
     !request.nextUrl.pathname.startsWith("/location")
@@ -59,6 +87,7 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
+
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

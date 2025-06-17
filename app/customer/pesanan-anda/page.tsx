@@ -11,33 +11,15 @@ import { SkeletonCard } from '@/components/skeleton';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { QrisPayment } from "@/components/qris-payment";
-
-// Define UUID as a type alias for string
-export type UUID = string;
+import { generateReceiptPDF } from '@/lib/pdf/receipt';
+import { Order } from '@/lib/types/orders_interface';
+import { UUID } from 'node:crypto';
 
 interface Customer {
   id: UUID;
   username: string;
   address: string;
-  phone_number: string;
-}
-
-interface Order {
-  id: UUID;
-  order_number: number;
-  users_id: UUID;
-  customer: Customer;
-  cashier: string;
-  order_type: string;
-  total_items: number;
-  total_price: number;
-  payment_amount: number;
-  income_amount: number;
-  payment_method: string;
-  status: string;
-  printed_at: string | null;
-  created_at: string;
-  order_products: OrderProduct[];
+  phone: string; // Changed from phone_number
 }
 
 interface OrderProduct {
@@ -54,40 +36,65 @@ interface OrderProduct {
 
 export default function OrdersPage() {
   const searchParams = useSearchParams();
-  const userId = searchParams.get('userId');
+  const authUserId = searchParams.get('userId');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isQrisDialogOpen, setIsQrisDialogOpen] = useState(false);
   const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<Order | null>(null);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [selectedOrderToCancel, setSelectedOrderToCancel] = useState<UUID | null>(null);
+  const [isWhatsappConfirmDialogOpen, setIsWhatsappConfirmDialogOpen] = useState(false);
+  const [selectedOrderForWhatsapp, setSelectedOrderForWhatsapp] = useState<Order | null>(null);
   const supabase = createClient();
 
   // Define fetchOrders outside useEffect to make it accessible
   const fetchOrders = async () => {
-    if (!userId) {
-      console.log("No userId found in search params.");
+    if (!authUserId) {
+      console.log("No authUserId found in search params.");
+      setLoading(false);
       return;
     }
-    console.log("Fetching orders for userId:", userId);
+    console.log("Fetching public_users_id for authUserId:", authUserId);
 
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch orders for this auth_id (which is user.id)
+      // First, get the public_users_id from users_public using authUserId
+      const { data: userData, error: userDataError } = await supabase
+        .from('users_public')
+        .select('id, phone')
+        .eq('auth_id', authUserId)
+        .single();
+
+      if (userDataError) {
+        console.error("Error fetching user_public data:", userDataError);
+        throw userDataError;
+      }
+
+      if (!userData) {
+        console.log("No user_public data found for authUserId:", authUserId);
+        setOrders([]);
+        return;
+      }
+      const publicUserId = userData.id;
+      console.log("Fetched publicUserId:", publicUserId);
+
+      // Then, fetch orders for this publicUserId
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
           *,
-          customer:auth_id (
+          customer:users_public!public_users_id (
             id,
             username,
             address,
-            phone_number
+            phone
           ),
           order_products (*)
         `)
-        .eq('auth_id', userId)
+        .eq('public_users_id', publicUserId)
         .order('created_at', { ascending: false });
 
       if (ordersError) {
@@ -107,14 +114,23 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, [userId]);
+  }, [authUserId]); // Use authUserId as dependency
 
-  const handleCancelOrder = async (orderId: UUID) => {
+  // New function to open cancel dialog
+  const handleOpenCancelDialog = (orderId: UUID) => {
+    setSelectedOrderToCancel(orderId);
+    setIsCancelDialogOpen(true);
+  };
+
+  // Modified handleCancelOrder to be the confirmation action
+  const handleConfirmCancelOrder = async () => {
+    if (!selectedOrderToCancel) return; // Should not happen if dialog is opened correctly
+
     try {
       const { error } = await supabase
         .from('orders')
         .update({ status: 'cancelled' })
-        .eq('id', orderId);
+        .eq('id', selectedOrderToCancel);
 
       if (error) {
         console.error("Error cancelling order:", error);
@@ -122,9 +138,11 @@ export default function OrdersPage() {
       }
 
       console.log("Order cancelled successfully");
-      await fetchOrders();
+      setIsCancelDialogOpen(false); // Close dialog
+      setSelectedOrderToCancel(null); // Clear selected order
+      await fetchOrders(); // Refresh orders
     } catch (err) {
-      console.error("Caught error in handleCancelOrder:", err);
+      console.error("Caught error in handleConfirmCancelOrder:", err);
     }
   };
 
@@ -137,27 +155,40 @@ export default function OrdersPage() {
     setIsQrisDialogOpen(true);
   };
 
+  // Modified handleProcessPayment to generate PDF using pdfmake
   const handleProcessPayment = async () => {
     if (!selectedOrderForPayment) return;
 
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: 'completed' })
-        .eq('id', selectedOrderForPayment.id);
+      const orderToPrint = selectedOrderForPayment;
 
-      if (error) {
-        console.error("Error completing order:", error);
-        throw error;
-      }
+      // Generate and download the PDF
+      const pdfDoc = generateReceiptPDF(orderToPrint);
+      pdfDoc.download(`Resi_Pesanan_${orderToPrint.order_number}.pdf`);
 
-      console.log("Order completed successfully");
+      // Open WhatsApp confirmation dialog
+      setSelectedOrderForWhatsapp(orderToPrint);
+      setIsWhatsappConfirmDialogOpen(true);
+
+      // Close the QRIS dialog
       setIsQrisDialogOpen(false);
       setSelectedOrderForPayment(null);
-      await fetchOrders();
+
     } catch (err) {
       console.error("Caught error in handleProcessPayment:", err);
     }
+  };
+
+  // New function to handle confirming opening WhatsApp
+  const handleConfirmOpenWhatsApp = () => {
+    if (!selectedOrderForWhatsapp) return;
+
+    const whatsappNumber = '+6285820247769'; // Fallback number
+    const genericWhatsappMessage = encodeURIComponent("Halo, saya ingin mengirimkan resi pesanan saya. Silakan lihat file terlampir.");
+    window.open(`https://wa.me/${whatsappNumber}?text=${genericWhatsappMessage}`, '_blank');
+
+    setIsWhatsappConfirmDialogOpen(false); // Close the dialog
+    setSelectedOrderForWhatsapp(null); // Clear selected order
   };
 
   const handlePrintReceipt = async (orderToPrint: Order) => {
@@ -181,7 +212,7 @@ export default function OrdersPage() {
             <div style="font-size: 0.875rem; margin-bottom: 16px;">
                 <p>No. Pesanan: #${orderToPrint.order_number}</p>
                 <p>Nama Customer: ${orderToPrint.customer?.username || ''}</p>
-                <p>No. Telp: ${orderToPrint.customer?.phone_number || ''}</p>
+                <p>No. Telp: ${orderToPrint.customer?.phone || ''}</p>
                 <p>Alamat Customer: ${orderToPrint.customer?.address || ''}</p>
             </div>   
 
@@ -304,15 +335,15 @@ export default function OrdersPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Customer</p>
-                    <p className="font-medium">{order.customer.username}</p>
+                    <p className="font-medium">{order.customer?.username}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Phone</p>
-                    <p className="font-medium">{order.customer.phone_number}</p>
+                    <p className="font-medium">{order.customer?.phone}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Address</p>
-                    <p className="font-medium">{order.customer.address}</p>
+                    <p className="font-medium">{order.customer?.address}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Tipe Pesanan</p>
@@ -339,7 +370,7 @@ export default function OrdersPage() {
                 <div className="border-t pt-4">
                   <h3 className="font-semibold mb-2">Items:</h3>
                   <div className="space-y-2">
-                    {order.order_products.map((product) => (
+                    {((order.order_products || [])).map((product) => (
                       <div key={product.id} className="flex justify-between text-sm">
                         <div>
                           <p className="font-medium">{product.product_name}</p>
@@ -357,9 +388,10 @@ export default function OrdersPage() {
 
                 {order.status === 'pending' && (
                   <div className="flex justify-end space-x-2 mt-4">
-                    <Button 
+                    <Button
                       variant="outline"
-                      onClick={() => handleCancelOrder(order.id)}
+                      onClick={() => handleOpenCancelDialog(order.id)}
+                      className='bg-red-600'
                     >
                       Batalkan Pesanan
                     </Button>
@@ -393,14 +425,64 @@ export default function OrdersPage() {
             )}
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsQrisDialogOpen(false)}
             >
               Tutup
             </Button>
             <Button onClick={handleProcessPayment}>
-              Konfirmasi Pembayaran
+              Konfirmasi & Download Resi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Pembatalan Pesanan</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Apakah Anda yakin ingin membatalkan pesanan ini? Aksi ini tidak dapat dibatalkan.</p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCancelDialogOpen(false);
+                setSelectedOrderToCancel(null);
+              }}
+            >
+              Batal
+            </Button>
+            <Button onClick={handleConfirmCancelOrder}>
+              Ya, Batalkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isWhatsappConfirmDialogOpen} onOpenChange={setIsWhatsappConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buka WhatsApp?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Resi telah berhasil diunduh. Apakah Anda ingin membuka WhatsApp untuk mengirimkannya secara manual?</p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsWhatsappConfirmDialogOpen(false);
+                setSelectedOrderForWhatsapp(null);
+              }}
+            >
+              Tidak
+            </Button>
+            <Button onClick={handleConfirmOpenWhatsApp}>
+              Ya, Buka WhatsApp
             </Button>
           </DialogFooter>
         </DialogContent>

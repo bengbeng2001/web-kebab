@@ -14,13 +14,13 @@ export default function Page() {
       <div className="w-full max-w-sm">
         <div className="flex flex-col gap-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="text-center">
               <CardTitle className="text-2xl">
                 Thank you for signing up!
               </CardTitle>
               <CardDescription>Ok Time to Order some foods</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="text-center">
               <p className="text-sm text-muted-foreground">
                Click Here to Order
               </p>

@@ -9,61 +9,53 @@ import { Badge } from "@/components/ui/badge";
 
 export function CartButton() {
   const router = useRouter();
-  const [userId, setUserId] = useState<string | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [orderCount, setOrderCount] = useState<number>(0);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     const getUserIdAndOrderCount = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUserId(user.id);
+        setAuthUserId(user.id);
 
         try {
+          // Get user role from users_public
           const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('username')
-            .eq('id', user.id)
+            .from('users_public')
+            .select('username, id, role')
+            .eq('auth_id', user.id)
             .single();
 
-          if (userError) {
+          if (userError) { //kalau user error
             console.error("Error fetching user data in CartButton:", userError);
             return;
           }
-          if (!userData || !userData.username) {
-            console.log("User data or username not found in CartButton for userId:", user.id);
-            return;
-          }
-          const username = userData.username;
 
-          const { data: customerData, error: customerError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('username', username)
-            .single();
-
-          if (customerError) {
-            console.error("Error fetching customer data in CartButton:", customerError);
-            return;
-          }
-          if (!customerData || !customerData.id) {
-            console.log("Customer data or ID not found in CartButton for username:", username);
+          if (!userData || !userData.username || !userData.id) { //kalau user data, username, id tidak diketahui maka error
+            console.log("User data, username, or id not found in CartButton for userId:", user.id);
             return;
           }
 
-          const customerIdFromCustomerTable = customerData.id;
+          // Set user role
+          setUserRole(userData.role);
 
-          const { count, error: countError } = await supabase
-            .from('orders')
-            .select('id', { count: 'exact', head: true })
-            .eq('users_id', customerIdFromCustomerTable);
+          // Only fetch order count if user is a customer
+          if (userData.role === 'customer') {
+            const publicUserId = userData.id;
 
-          if (countError) {
-            console.error("Error fetching order count in CartButton:", countError);
-            return;
+            const { count, error: countError } = await supabase
+              .from('orders')
+              .select('id', { count: 'exact', head: true })
+              .eq('public_users_id', publicUserId);
+
+            if (countError) {
+              console.error("Error fetching order count in CartButton:", countError);
+              return;
+            }
+            setOrderCount(count || 0);
           }
-          setOrderCount(count || 0);
-
         } catch (err) {
           console.error("Caught error in CartButton fetch order count:", err);
         }
@@ -74,10 +66,19 @@ export function CartButton() {
   }, [supabase]);
 
   const handleClick = () => {
-    if (userId) {
-      router.push(`/customer/pesanan-anda?userId=${userId}`);
+    if (!authUserId || !userRole) return;
+
+    if (userRole === 'customer') {
+      router.push(`/customer/pesanan-anda?userId=${authUserId}`);
+    } else{
+      router.push("/");
     }
   };
+
+  // Only show cart button for customers
+  if (userRole !== 'customer') {
+    return null;
+  }
 
   return (
     <Button 

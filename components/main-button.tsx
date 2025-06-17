@@ -2,40 +2,49 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Home } from "lucide-react";
 
 export function MainButton() {
-  const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
-    const checkUserRole = async () => {
+    const getUserSession = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      
       if (user) {
+        setUserId(user.id);
+
         const { data: profile, error } = await supabase
-          .from('users')
+          .from('users_public')
           .select('role')
-          .eq('id', user.id)
+          .eq('auth_id', user.id)
           .single();
-        
-        if (!error && profile) {
+
+        if (error) {
+          console.error("Error fetching user role:", error);
+          return;
+        }
+        if (profile?.role) {
           setUserRole(profile.role);
         }
       }
     };
 
-    checkUserRole();
-  }, []);
+    getUserSession();
+  }, [supabase]);
 
   const handleClick = () => {
-    if (userRole === 'admin') {
-      router.push('/admin');
+    if (userId && userRole === 'admin') {
+      router.push("/admin");
+    } else if (userId && userRole === 'customer') {
+      router.push("/customer");
     } else {
-      router.push('/customer');
+      router.push("/");
     }
   };
 

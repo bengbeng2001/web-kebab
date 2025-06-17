@@ -78,8 +78,15 @@ export default function OrderPage() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [cartItems, setCartItems] = useState<Omit<OrderProduct, 'id' | 'created_at'>[]>([]);
+  const [isUserSelectDialogOpen, setIsUserSelectDialogOpen] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const router = useRouter();
+  const calculateCartTotals = () => {
+    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalPrice = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
+    return { totalItems, totalPrice };
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -94,6 +101,38 @@ export default function OrderPage() {
       setProducts(productsData.products);
     }
   }, [productsData]);
+
+  // Fetch users when dialog opens
+  useEffect(() => {
+    if (isUserSelectDialogOpen) {
+      fetchUsers();
+    }
+  }, [isUserSelectDialogOpen]);
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users_public')
+        .select('id, username, phone, address, role')
+        .eq('role', 'customer')
+        .ilike('username', `%${searchQuery}%`)
+        .limit(10);
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setErrorMessage('Error fetching users');
+    }
+  };
+
+  const handleUserSelect = (user: any) => {
+    setNewCustomerName(user.username);
+    setNewCustomerPhone(user.phone || '');
+    setNewCustomerAddress(user.address || '');
+    setCreatedCustomerId(user.id);
+    setIsUserSelectDialogOpen(false);
+  };
 
   // Mendapatkan kategori unik dari daftar produk
   const uniqueCategories = Array.from(new Set(productsData?.products.flatMap(p => p.categories || []).map(c => JSON.stringify(c))))
@@ -229,60 +268,81 @@ export default function OrderPage() {
 
       if (!validateNewOrder()) return;
 
-      const { data: customer, error: customerError } = await supabase
-        .from('customers')
-        .insert([
-          {
-            name: newCustomerName,
-            address: newCustomerAddress,
-            phone_number: newCustomerPhone,
-          },
-        ])
-        .select()
-        .single();
-
-      if (customerError) throw customerError;
-      setCreatedCustomerId(customer.id);
-
       const paymentAmountValue = parseInt(newOrderPaymentAmount);
       const finalPaymentAmount = isNaN(paymentAmountValue) || paymentAmountValue < 0 ? 0 : paymentAmountValue;
 
-      const newOrderData = await createOrderCall({
+      // Calculate totals from cart items
+      const { totalItems, totalPrice } = calculateCartTotals();
+
+      // Log the data we're about to send
+      console.log('Creating order with data:', {
         order_number: Math.floor(Math.random() * 1000000),
-        customer_id: customer.id,
+        public_users_id: createdCustomerId,
         cashier: newOrderCashier,
         order_type: newOrderType,
-        total_items: 0,
-        total_price: 0,
+        total_items: totalItems,
+        total_price: totalPrice,
         payment_amount: finalPaymentAmount,
         income_amount: finalPaymentAmount,
         payment_method: newOrderPaymentMethod,
         status: newOrderStatus,
         printed_at: null,
-      });
-      if (!newOrderData || !newOrderData.id) throw new Error('Order creation failed or no ID returned.');
-
-      const orderId = newOrderData.id;
-
-      const orderProductsToInsert = cartItems.map(item => ({ ...item, order_id: orderId }));
-
-      const createdOrderProducts = await createOrderProductsCall(orderProductsToInsert);
-
-      if (!createdOrderProducts) throw new Error('Order products creation failed.');
-
-      const calculatedTotalItems = createdOrderProducts.reduce((sum, item) => sum + item.quantity, 0);
-      const calculatedTotalPrice = createdOrderProducts.reduce((sum, item) => sum + item.subtotal, 0);
-
-      await updateOrderCall(orderId, {
-        total_items: calculatedTotalItems,
-        total_price: calculatedTotalPrice,
+        cartItems
       });
 
+      const newOrderData = await createOrderCall({
+        order_number: Math.floor(Math.random() * 1000000),
+        public_users_id: createdCustomerId!,
+        cashier: newOrderCashier,
+        order_type: newOrderType,
+        total_items: totalItems,
+        total_price: totalPrice,
+        payment_amount: finalPaymentAmount,
+        income_amount: finalPaymentAmount,
+        payment_method: newOrderPaymentMethod,
+        status: newOrderStatus,
+        printed_at: null
+      });
+
+      if (!newOrderData || !Array.isArray(newOrderData) || newOrderData.length === 0) {
+        throw new Error('Failed to create order - no data returned');
+      }
+
+      const createdOrder = newOrderData[0] as Order;
+      console.log('Order created successfully:', createdOrder);
+
+      // Create order products
+      if (cartItems.length > 0) {
+        const orderProductsData = await createOrderProductsCall(
+          cartItems.map(item => ({
+            ...item,
+            order_id: createdOrder.id
+          }))
+        );
+
+        if (!orderProductsData) {
+          throw new Error('Failed to create order products - no data returned');
+        }
+
+        console.log('Order products created successfully:', orderProductsData);
+      }
+
+      // Reset form
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+      setNewCustomerAddress('');
+      setNewOrderCashier('');
+      setNewOrderType('');
+      setNewOrderPaymentMethod('');
+      setNewOrderPaymentAmount('');
+      setNewOrderStatus('pending');
+      setCartItems([]);
+      setCreatedCustomerId(null);
       setIsCreateDialogOpen(false);
       fetchOrders();
-    } catch (error: any) {
-      console.error('Error creating order:', error);
-      setErrorMessage(error.message || 'Gagal membuat pesanan');
+    } catch (error) {
+      console.error('Detailed error creating order:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Error creating order');
     }
   };
 
@@ -344,8 +404,8 @@ export default function OrderPage() {
 
             <div style="font-size: 0.875rem; margin-bottom: 16px;">
                 <p>No. Pesanan: #${orderToPrint.order_number}</p>
-                <p>Nama Customer: ${orderToPrint.customer?.name || ''}</p>
-                <p>No. Telp: ${orderToPrint.customer?.phone_number || ''}</p>
+                <p>Nama Customer: ${orderToPrint.customer?.username || ''}</p>
+                <p>No. Telp: ${orderToPrint.customer?.phone || ''}</p>
                 <p>Alamat Customer: ${orderToPrint.customer?.address || ''}</p>
             </div>   
 
@@ -439,12 +499,6 @@ export default function OrderPage() {
   const filteredProducts = selectedCategory === 'all'
     ? products
     : products.filter(p => p.categories?.some(c => c.id === selectedCategory));
-
-  const calculateCartTotals = () => {
-    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-    const totalPrice = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
-    return { totalItems, totalPrice };
-  };
 
   const { totalItems, totalPrice } = calculateCartTotals();
 
@@ -601,7 +655,20 @@ export default function OrderPage() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="newCustomerName">Nama Customer</Label>
-                    <Input id="newCustomerName" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} />
+                    <div className="flex gap-2">
+                      <Input
+                        id="newCustomerName"
+                        value={newCustomerName}
+                        onChange={(e) => setNewCustomerName(e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsUserSelectDialogOpen(true)}
+                      >
+                        Select User
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newCustomerPhone">Nomor Telepon</Label>
@@ -920,8 +987,8 @@ export default function OrderPage() {
           {selectedOrder && (
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <p><b>Nama Customer:</b> {selectedOrder.customer?.name}</p>
-                <p><b>Nomor Telepon:</b> {selectedOrder.customer?.phone_number}</p>
+                <p><b>Nama Customer:</b> {selectedOrder.customer?.username}</p>
+                <p><b>Nomor Telepon:</b> {selectedOrder.customer?.phone}</p>
                 <p><b>Alamat:</b> {selectedOrder.customer?.address}</p>
                 <p><b>Kasir:</b> {selectedOrder.cashier}</p>
                 <p><b>Tipe Pesanan:</b> {selectedOrder.order_type}</p>
@@ -960,6 +1027,55 @@ export default function OrderPage() {
           <DialogFooter>
             <Button onClick={() => setIsViewDialogOpen(false)}>Tutup</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Selection Dialog */}
+      <Dialog open={isUserSelectDialogOpen} onOpenChange={setIsUserSelectDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Select User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                fetchUsers();
+              }}
+            />
+            <div className="max-h-[400px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Username</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.username}</TableCell>
+                      <TableCell>{user.phone || '-'}</TableCell>
+                      <TableCell>{user.address || '-'}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUserSelect(user)}
+                        >
+                          Select
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -9,36 +9,46 @@ export async function getProductData() {
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select(`
-        *,
+        id,
+        name,
+        description,
+        price,
+        stock,
+        created_at,
         categories (
           id,
-          name
+          name,
+          description,
+          created_at
         )
       `)
-      .order('created_at', { ascending: false })
-    if (productsError) throw productsError
+      .order('created_at', { ascending: false });
 
-    // Transform product data, ensuring categories is always an array (even if it's a single object from a one-to-many join)
+    if (productsError) {
+      console.error('Supabase products fetch error:', productsError);
+      throw productsError;
+    }
+
+    // Transform product data, ensuring categories is always an array
     const transformedProduct: Product[] = products?.map((product: any) => ({
       id: product.id,
-      // Ensure categories is an array: handle null, object, or array from Supabase
       categories: product.categories 
-        ? (Array.isArray(product.categories) ? product.categories : [product.categories]) // If exists, make it an array (wrap object if needed)
-        : [], // If null/undefined, default to empty array
+        ? (Array.isArray(product.categories) ? product.categories : [product.categories])
+        : [],
       name: product.name,
       description: product.description,
       price: product.price,
       stock: product.stock || 0,
       created_at: product.created_at,
-    })) || []
+    })) || [];
 
     return {
       totalProducts: transformedProduct.length,
       products: transformedProduct,
     }
   } catch (error) {
-    console.error('Error fetching products:', error)
-    throw error
+    console.error('Error in getProductData function:', error);
+    throw error;
   }
 }
 
@@ -48,16 +58,26 @@ export async function getProductById(id: UUID) {
     const { data: product, error } = await supabase
       .from('products')
       .select(`
-        *,
+        id,
+        name,
+        description,
+        price,
+        stock,
+        created_at,
         categories (
           id,
-          name
+          name,
+          description,
+          created_at
         )
       `)
       .eq('id', id)
-      .single()
+      .single();
 
-    if (error) throw error
+    if (error) {
+      console.error(`Supabase product by ID fetch error for ID ${id}:`, error);
+      throw error;
+    }
     
     // Transform data to ensure categories is always an array
     const transformedProduct: Product | null = product ? ({
@@ -70,12 +90,12 @@ export async function getProductById(id: UUID) {
         price: product.price,
         stock: product.stock || 0,
         created_at: product.created_at,
-    }) : null
+    }) : null;
 
-    return transformedProduct
+    return transformedProduct;
   } catch (error) {
-    console.error('Error fetching product by ID:', error)
-    throw error
+    console.error(`Error in getProductById function for ID ${id}:`, error);
+    throw error;
   }
 }
 
@@ -94,9 +114,13 @@ export async function createProduct(productData: ProductUpsertData) {
       .select()
       .single();
 
-    if (productError) throw productError;
+    if (productError) {
+      console.error('Supabase create product error:', productError);
+      throw productError;
+    }
     return newProduct;
   } catch (error) {
+    console.error('Error in createProduct function:', error);
     throw error;
   }
 }
@@ -109,10 +133,14 @@ export async function updateProduct(id: UUID, productData: Partial<ProductUpsert
       .update(productData)
       .eq('id', id);
     
-    if (productError) throw productError;
+    if (productError) {
+      console.error(`Supabase update product error for ID ${id}:`, productError);
+      throw productError;
+    }
     const updatedProduct = await getProductById(id);
     return updatedProduct;
   } catch (error) {
+    console.error(`Error in updateProduct function for ID ${id}:`, error);
     throw error;
   }
 }
@@ -125,9 +153,13 @@ export async function deleteProduct(id: UUID) {
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error(`Supabase delete product error for ID ${id}:`, error);
+      throw error;
+    }
     return { success: true };
   } catch (error) {
+    console.error(`Error in deleteProduct function for ID ${id}:`, error);
     throw error;
   }
 }

@@ -5,7 +5,7 @@ export interface Customer {
   id: UUID;
   username: string;
   address: string;
-  phone_number: string;
+  phone: string;
 }
 
 export interface OrderProduct {
@@ -34,7 +34,7 @@ export interface Order {
   income_amount: number;
   payment_method: string;
   status: string;
-  auth_id: UUID;
+  public_users_id: UUID;
   customer?: Customer;
   order_products?: OrderProduct[];
 } 
