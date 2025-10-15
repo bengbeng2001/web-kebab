@@ -70,13 +70,13 @@ export default async function DashboardPage() {
       </div>
 
       {/* Category Overview */}
-      <CategoryOverview 
+      {/*<CategoryOverview 
         categories={data.categories} 
         totalProducts={data.totalProducts} 
-      />
+      />*/}
 
       {/* Recent Categories */}
-      <RecentCategories categories={data.categories} />
+      {/*<RecentCategories categories={data.categories} />*/}
 
       {/* Recent Products */}
       <RecentProducts products={data.products} />

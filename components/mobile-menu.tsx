@@ -60,7 +60,7 @@ export function MobileMenu() {
               className="px-4 py-2 hover:bg-accent rounded-md transition-colors"
               onClick={() => setIsOpen(false)}
             >
-              Pesan Sekarang!!!
+              Pesan Disini -.-
             </Link>
             <Link 
               href="/location" 

@@ -11,7 +11,7 @@ import { Footer } from "@/components/footer";
 export default function Home() {
   const navLinks = [
     { href: "/about", label: "Tentang Kami" },
-    { href: "/order", label: "Pesan Sekarang!!!" },
+    { href: "/order", label: "Pesan Disini -.-" },
     { href: "/location", label: "Lokasi Kami" },
   ];
 

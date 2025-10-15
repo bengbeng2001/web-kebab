@@ -85,7 +85,7 @@ export default async function ProtectedLayout({
                 className="text-lg font-semibold hover:text-primary transition-colors truncate text-center block w-full"
                 style={{wordBreak: 'break-word'}}
               >
-                Pesan Sekarang!!!
+                Pesan Disini -.-
               </Link>
             </div>
             <div className="w-24 flex justify-end flex-shrink-0">
@@ -130,7 +130,7 @@ export default async function ProtectedLayout({
                 href="/customer/pesan"
                 className="block py-2 hover:text-primary transition-colors"
               >
-                Pesan Sekarang
+                Pesan Disini -.-
               </Link>
               <Link
                 href="/customer/pesanan-anda"
