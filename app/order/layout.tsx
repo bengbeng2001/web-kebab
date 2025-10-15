@@ -14,7 +14,7 @@ export default function ProtectedLayout({
 }) {
   const navLinks = [
     { href: "/about", label: "Tentang Kami" },
-    { href: "/order", label: "Pesan Sekarang!!!" },
+    { href: "/order", label: "Pesan Disini -.-" },
     { href: "/location", label: "Lokasi Kami" },
   ];
 
